@@ -30,7 +30,7 @@ def load_resources():
             
         # Load Model
         if os.path.exists('best_model_case_4.h5'):
-            model = tf.keras.models.load_model("best_model_case_4.h5", compile=False)
+            model = tf.keras.models.load_model("best_model_case_4.h5", compile=False, safe_mode=False)
         else:
             return None, None, None, None
 
@@ -284,4 +284,5 @@ elif menu == "Forecasting WTI":
                 data=df_future.to_csv(index=False),
                 file_name="forecast_wti_future.csv",
                 mime="text/csv"
+
             )

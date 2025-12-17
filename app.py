@@ -4,45 +4,59 @@ import pandas as pd
 import numpy as np
 import joblib
 import tensorflow as tf
-from tensorflow import keras # Gunakan keras dari tensorflow agar sinkron
+from tensorflow import keras
 import json
 import matplotlib.pyplot as plt
 from sklearn.metrics import mean_absolute_percentage_error, mean_squared_error
 
 # =========================================================
-# 1. CONFIG & LOAD RESOURCES
+# 1. CONFIG & SECURITY FIX
 # =========================================================
 st.set_page_config(layout="wide", page_title="Dashboard TA - Forecasting WTI")
 
-# PINDAHKAN KE SINI: Jalankan konfigurasi di tingkat global/paling atas
+# Mengizinkan pemuatan Lambda layers (Solusi Error Deserialization)
 try:
-    tf.keras.config.enable_unsafe_deserialization()
+    keras.config.enable_unsafe_deserialization()
 except AttributeError:
-    # Untuk versi TF yang lebih lama jika method di atas tidak ada
+    # Fallback untuk versi TensorFlow lama
     pass
 
 @st.cache_resource
 def load_resources():
     """Load model, scalers, dan parameter konfigurasi."""
     try:
-        # Load Window Size
+        # Load Window Size dari JSON
         window_size = 30 
         if os.path.exists('best_params_case_4.json'):
             with open('best_params_case_4.json', 'r') as f:
                 params = json.load(f)
             window_size = params.get('sliding_window', 30)
             
-        # Load Model dengan parameter tambahan
+        # Load Model dengan safe_mode=False
         if os.path.exists('best_model_case_4.h5'):
-            # TAMBAHKAN safe_mode=False di sini
             model = tf.keras.models.load_model(
                 "best_model_case_4.h5", 
-                compile=False, 
-                safe_mode=False
+                compile=False,
+                safe_mode=False  # Kunci utama perbaikan error
             )
         else:
+            st.error("File model 'best_model_case_4.h5' tidak ditemukan!")
             return None, None, None, None
 
+        # Load Scalers
+        if os.path.exists('scaler_X_case_4.pkl') and os.path.exists('scaler_y_case_4.pkl'):
+            scaler_X = joblib.load('scaler_X_case_4.pkl')
+            scaler_y = joblib.load('scaler_y_case_4.pkl')
+        else:
+            st.error("File scaler (.pkl) tidak ditemukan!")
+            return None, None, None, None
+
+        return model, scaler_X, scaler_y, window_size
+    except Exception as e:
+        st.error(f"System Error saat Load Resources: {e}")
+        return None, None, None, None
+
+# Load resources secara global
 model, scaler_X, scaler_y, window_size = load_resources()
 
 # =========================================================
@@ -282,4 +296,5 @@ elif menu == "Forecasting WTI":
                 mime="text/csv"
 
             )
+
 
